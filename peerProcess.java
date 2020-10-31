@@ -115,5 +115,4 @@ public class peerProcess {
 		System.out.println(Calendar.getInstance().getTime() + ": Peer " + msg);
 	}
 	
-
 }
