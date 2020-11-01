@@ -1,3 +1,13 @@
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Vector;
+
 /**
  * 
  */
@@ -7,26 +17,30 @@
  *
  */
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
+//import java.io.*;
+//import java.net.*;
+
 public class peerProcess {
 	public ServerSocket sock = null;
-	public static String pID;
+	public static String peerId;
 	public int pIndx;
 	public int portNum;
-	public static HashMap<String, remotePeer> remotePeerDets = new HashMap<String, remotePeer>();
+	public static Map<String, Peer> peerMap = new HashMap<String, Peer>();
 	
+	public static  Map<String, Peer> preferedNeighboursMap = new HashMap<String, Peer>();
+	
+	public static Map<String, Socket> socketMap = new HashMap<String, Socket>();
 	public Thread thread;
 	public static Vector<Thread> tSender = new Vector<Thread>();
+	public static BitOperation bitOperation = null;
 	
 	public static void main (String[] args) {
 		try {
 			peerProcess pProc = new peerProcess();
 			
-			pID=args[0];
-			Logger.startLog("log_peer_" + pID +".log");
-			printLog(pID + " is started");
+			peerId=args[0];
+			Logger.startLog("log_peer_" + peerId +".log");
+			printLog(peerId + " is started");
 			
 			readCommonConfig();
 			readPeerConfig();
@@ -35,18 +49,19 @@ public class peerProcess {
 			//Iterator rmpIter = remotePeerDets.entrySet().iterator();
 			
 			boolean firstPeerFlag = false;
-			Iterator<String> i = remotePeerDets.keySet().iterator();
+			Iterator<String> i = peerMap.keySet().iterator();
 			while(i.hasNext()) {
-				remotePeer rmp = remotePeerDets.get(i.next());
-				if(rmp.pId==pID)
+				Peer rmp = peerMap.get(i.next());
+				if(rmp.peerId==peerId)
 				{
 					// checks if the peer is the first peer or not
-					pProc.portNum = Integer.parseInt(rmp.pPort);
-					pProc.pIndx = rmp.pIndex;
-					if(rmp.getIsFirst() == 1)
+					pProc.portNum = Integer.parseInt(rmp.peerPort);
+					pProc.pIndx = rmp.peerIndex;
+					if(rmp.isFirst() == 1)
 					{
 						firstPeerFlag = true;
 						break;
+						
 					}
 				}
 			}
@@ -66,23 +81,23 @@ public class peerProcess {
 					pProc.sock = new ServerSocket(pProc.portNum);
 					
 					//instantiates and starts Listening Thread
-					pProc.thread = new Thread(new listeningThread(pProc.sock, pID));
+					pProc.thread = new Thread(new listeningThread(pProc.sock, peerId));
 					pProc.thread.start();
 				}
 				catch(SocketTimeoutException e)
 				{
-					printLog(pID + " encountered time-out expetion: " + e.toString());
+					printLog(peerId + " encountered time-out expetion: " + e.toString());
 					Logger.stopLog();
 					System.exit(0);
 				}
 				catch(IOException e)
 				{
-					printLog(pID + " encountered exception while starting listening thread: " + pProc.portNum + e.toString());
+					printLog(peerId + " encountered exception while starting listening thread: " + pProc.portNum + e.toString());
 					Logger.stopLog();
 					System.exit(0);
 				}
 				catch (Exception e) {
-					printLog(pID + " encountered an exception: " + pProc.portNum + e.toString());
+					printLog(peerId + " encountered an exception: " + pProc.portNum + e.toString());
 					Logger.stopLog();
 					System.exit(0);
 				}
@@ -93,11 +108,11 @@ public class peerProcess {
 		}
 		catch(Exception e)
 		{
-			printLog(pID + " encountered exception : " + e.getMessage() );
+			printLog(peerId + " encountered exception : " + e.getMessage() );
 		}
 		finally
 		{
-			printLog(pID + " Exiting Peer process...");
+			printLog(peerId + " Exiting Peer process...");
 			Logger.stopLog();
 			System.exit(0);
 		}
