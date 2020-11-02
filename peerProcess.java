@@ -10,7 +10,8 @@
 import java.io.*;
 import java.net.*;
 import java.util.*;
-public class peerProcess {
+public class peerProcess 
+{
 	public ServerSocket sock = null;
 	public static String pID;
 	public int pIndx;
@@ -20,8 +21,10 @@ public class peerProcess {
 	public Thread thread;
 	public static Vector<Thread> tSender = new Vector<Thread>();
 	
-	public static void main (String[] args) {
-		try {
+	public static void main (String[] args) 
+	{
+		try 
+		{
 			peerProcess pProc = new peerProcess();
 			
 			pID=args[0];
@@ -60,7 +63,8 @@ public class peerProcess {
 						messageProcessor.start();
 			*/
 			
-			if(firstPeerFlag==true) {
+			if(firstPeerFlag==true) 
+			{
 				try
 				{
 					pProc.sock = new ServerSocket(pProc.portNum);
@@ -103,10 +107,12 @@ public class peerProcess {
 		}
 	}
 	
-    public static void readCommonConfig() {
+    public static void readCommonConfig() 
+    {
 		
 	}
-    public static void readPeerConfig() {
+    public static void readPeerConfig() 
+    {
 		
     }
     public static void printLog(String msg)

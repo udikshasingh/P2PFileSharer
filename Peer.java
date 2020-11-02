@@ -1,5 +1,6 @@
 
-public class Peer implements Comparable<Peer>{
+public class Peer implements Comparable<Peer>
+{
 	
 	String peerId;
 	String peerMachine;
@@ -8,7 +9,8 @@ public class Peer implements Comparable<Peer>{
 	int handshakeCompleted;
 	public double speed = 0;
 	
-	public int compareTo(Peer peer) {
+	public int compareTo(Peer peer) 
+	{
 		
 		if (this.speed > peer.speed) 
 			return 1;

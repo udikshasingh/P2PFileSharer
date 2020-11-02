@@ -45,31 +45,40 @@ public class remotePeer //implements Comparable<RemotePeerInfo>
 		bitField = new BitField();
 		peerIndex = pIndex;
 	}*/
-	public String getPeerId() {
+	public String getPeerId() 
+	{
 		return pId;
 	}
-	public void setPeerId(String pId) {
+	public void setPeerId(String pId) 
+	{
 		this.pId = pId;
 	}
-	public String getPeerAddress() {
+	public String getPeerAddress() 
+	{
 		return pAddr;
 	}
-	public void setPeerAddress(String pAddr) {
+	public void setPeerAddress(String pAddr) 
+	{
 		this.pAddr = pAddr;
 	}
-	public String getPeerPort() {
+	public String getPeerPort() 
+	{
 		return pPort;
 	}
-	public void setPeerPort(String pPort) {
+	public void setPeerPort(String pPort) 
+	{
 		this.pPort = pPort;
 	}
-	public int getIsFirst() {
+	public int getIsFirst() 
+	{
 		return isFirst;
 	}
-	public void setIsFirst(int isFirst) {
+	public void setIsFirst(int isFirst) 
+	{
 		this.isFirst = isFirst;
 	}
-	public int compareTo(remotePeer peer1) {
+	public int compareTo(remotePeer peer1) 
+	{
 		
 		if (this.dataRate > peer1.dataRate) 
 			return 1;

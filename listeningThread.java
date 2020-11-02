@@ -32,7 +32,7 @@ public class listeningThread implements Runnable
 				clientSock = serverSock.accept();
 				// instantiates thread for handling individual remote peer
 				//-->> need to be implemented(-> RemotePeerHandler class) :: senderThrd = new Thread(new RemotePeerHandler(remoteSocket,0,peerID));
-				peerProcess.printLog(pNum + " Connection is established");
+				peerProcess.printLog(pNum + "Connection is established");
 				peerProcess.tSender.add(senderThrd);
 				senderThrd.start(); 
 			}
