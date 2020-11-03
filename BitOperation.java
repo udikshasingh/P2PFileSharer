@@ -48,4 +48,23 @@ public class BitOperation {
 		
 	}
 	
+	public void initializeBitOp(String peer, int firstPeerFile) {
+
+		if (firstPeerFile == 1) {
+			for (int i = 0; i < this.length; i++) {
+				this.pieces[i].setIsPresent(1);
+				this.pieces[i].setFromPeer(peer);
+			}
+		}
+
+		else if (firstPeerFile != 1){
+			for (int i = 0; i < this.length; i++) {
+				this.pieces[i].setIsPresent(0);
+				this.pieces[i].setFromPeer(peer);
+			}
+
+		}
+
+	}
+	
 }

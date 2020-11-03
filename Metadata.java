@@ -2,10 +2,10 @@
 public class Metadata {
 	
 	public static int numberOfPreferredNeighbours;
-	//public static int unchokingInterval;
-	//public static int optUnchokingInterval;
-	//public static String fileName;
-	//public static int fileSize;
-	//public static int pieceSize;
+	public static int unchokeInterval;
+	public static int optimisticUnchokeInterval;
+	public static String fname;
+	public static int fsize;
+	public static int pieceLength;
 	
 }

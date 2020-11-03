@@ -1,4 +1,4 @@
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -34,23 +34,98 @@ public class peerProcess {
 	public static Vector<Thread> tSender = new Vector<Thread>();
 	public static BitOperation bitOperation = null;
 	
-	public static void main (String[] args) {
+	
+	static FileOutputStream logFile;
+	static OutputStreamWriter out;
+
+	
+	public static void main (String[] args) throws IOException {
 		try {
+			
 			peerProcess pProc = new peerProcess();
 			
 			peerId=args[0];
-			Logger.startLog("log_peer_" + peerId +".log");
+			//Logger.startLog("log_peer_" + peerId +".log");
+			logFile = new FileOutputStream("log_peer_" + peerId +".log");
+			out = new OutputStreamWriter(logFile);
 			printLog(peerId + " is started");
 			
-			readCommonConfig();
-			readPeerConfig();
+			//reading Common.cfg
+			String commLine = "";
+			try {
+				//Metadata meta = new Metadata();
+				BufferedReader br = new BufferedReader(new FileReader("Common.cfg"));
+				while ((commLine = br.readLine()) != null) {
+					String[] comm = commLine.split("\\s+");
+					if (comm[0].toLowerCase().equals("numberofpreferredneighbors")){
+						Metadata.numberOfPreferredNeighbours = Integer.parseInt(comm[1]);
+					}  
+					else if (comm[0].toLowerCase().equals("unchokinginterval")) {
+						Metadata.unchokeInterval = Integer.parseInt(comm[1]);
+					} 
+					else if (comm[0].toLowerCase().equals("optimisticunchokinginterval")) {
+						Metadata.optimisticUnchokeInterval = Integer.parseInt(comm[1]);
+					} 
+					else if (comm[0].toLowerCase().equals("filename")) {
+						Metadata.fname = comm[1];
+					} 
+					else if (comm[0].toLowerCase().equals("filesize")) {
+						Metadata.fsize = Integer.parseInt(comm[1]);
+					} 
+					else if (comm[0].toLowerCase().equals("piecesize")) {
+						Metadata.pieceLength = Integer.parseInt(comm[1]);
+					} 
+				}
+
+				br.close();
+			}
+			catch(FileNotFoundException e) {
+				System.out.println(peerId + ": " + "encountered FileNotFoundException while reading CommonConfiguration file");
+			}
+			catch(IOException e) {
+				System.out.println(peerId + ": " + "encountered IOException while reading CommonConfiguration file");
+			}
+				
+			
+			
+			//read PeerInfo File
+			String peerLine;
+			try {
+				BufferedReader br = new BufferedReader(new FileReader("PeerInfo.cfg"));
+				int i = 0;
+				while ((peerLine = br.readLine()) != null) {
+					String[] peer = peerLine.split("\\s+");
+				/*	peerMap.put(peer[0], new Peer(peer[0],
+							peer[1], peer[2], Integer.parseInt(peer[3]), i) );*/
+					i++;
+				}
+				br.close();
+			} 
+			catch(FileNotFoundException e) {
+				System.out.println(peerId + ": " + "encountered FileNotFoundException while reading CommonConfiguration file");
+			}
+			catch(IOException e) {
+				System.out.println(peerId + ": " + "encountered IOException while reading CommonConfiguration file");
+			}
+			
 			//initializeNeighbours();
 			
-			//Iterator rmpIter = remotePeerDets.entrySet().iterator();
+			int flag = 0;
+			Iterator<String> itr = peerMap.keySet().iterator();
+			for(int i=0;i<peerMap.size();i++) {
+				if(peerId.equalsIgnoreCase(peerMap.get(itr.next()).peerId)) {
+					pProc.portNum = Integer.parseInt(peerMap.get(itr.next()).peerPort);
+					pProc.pIndx = peerMap.get(itr.next()).peerIndex;
+					Peer p = new Peer();
+					if(p.isFirst()==1) {
+						flag = 1;
+						break;
+					}
+					
+				}
+			}
 			
-			boolean firstPeerFlag = false;
-			Iterator<String> i = peerMap.keySet().iterator();
-			while(i.hasNext()) {
+			/*while(i.hasNext()) {
 				Peer rmp = peerMap.get(i.next());
 				if(rmp.peerId==peerId)
 				{
@@ -64,18 +139,20 @@ public class peerProcess {
 						
 					}
 				}
+			}*/
+			
+		    // Initialize the BitOperation class 
+			
+			bitOperation = new BitOperation();
+			if(flag==1) {
+				bitOperation.initializeBitOp(peerId, 1);
+			}
+			else if (flag== 0) {
+				bitOperation.initializeBitOp(peerId, 0);
 			}
 			
-			/*	
-		    // Initialize the Bit field class 
-						ownBitField = new BitField();
-						ownBitField.initOwnBitfield(peerID, isFirstPeer?1:0);
-						
-						messageProcessor = new Thread(new MessageProcessor(peerID));
-						messageProcessor.start();
-			*/
 			
-			if(firstPeerFlag==true) {
+			if(flag == 1) {
 				try
 				{
 					pProc.sock = new ServerSocket(pProc.portNum);
@@ -87,23 +164,50 @@ public class peerProcess {
 				catch(SocketTimeoutException e)
 				{
 					printLog(peerId + " encountered time-out expetion: " + e.toString());
-					Logger.stopLog();
+					out.close();
+					logFile.close();
+					e.printStackTrace();
 					System.exit(0);
 				}
 				catch(IOException e)
 				{
 					printLog(peerId + " encountered exception while starting listening thread: " + pProc.portNum + e.toString());
-					Logger.stopLog();
+					out.close();
+					logFile.close();
+					e.printStackTrace();
 					System.exit(0);
 				}
 				catch (Exception e) {
 					printLog(peerId + " encountered an exception: " + pProc.portNum + e.toString());
-					Logger.stopLog();
+					out.close();
+					logFile.close();
+					e.printStackTrace();
 					System.exit(0);
 				}
 			}
-			
-			
+			else {
+				try {
+					File peerFile = new File(peerId);
+					peerFile.mkdir();
+					byte b = 0;
+					File file = new File(peerId, Metadata.fname);
+					OutputStream op = new FileOutputStream(file, true);
+					for (int i = 0; i < Metadata.fsize; i++)
+						op.write(b);
+					op.close();
+				} 
+				catch (Exception e) {
+					printLog(peerId + ": ERROR in creating the file : " + e.getMessage());
+				}
+//	------------------------------------------------------------------			
+				
+//				for(int i=0;i<peerMap.size();i++) {
+//					if(pProc.pIndx>peerMap.get(itr.next()).peerIndex) {
+//						
+//					}
+//				}
+//				-----------------------------------------------------------------------------
+			}
 			
 		}
 		catch(Exception e)
@@ -113,21 +217,23 @@ public class peerProcess {
 		finally
 		{
 			printLog(peerId + " Exiting Peer process...");
-			Logger.stopLog();
+			out.close();
+			logFile.close();
+//	        e.printStackTrace();
 			System.exit(0);
 		}
 	}
 	
-    public static void readCommonConfig() {
-		
-	}
-    public static void readPeerConfig() {
-		
-    }
+
     public static void printLog(String msg)
 	{
-		Logger.writeLog(Calendar.getInstance().getTime() + ": Peer " + msg);
-		System.out.println(Calendar.getInstance().getTime() + ": Peer " + msg);
+    	String time = Calendar.getInstance().getTime().toString();
+    	try {
+			out.write(time +": Peer " + msg + '\n');
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.out.println(time + ": Peer " + msg);
 	}
 	
 }
