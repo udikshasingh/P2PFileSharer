@@ -10,14 +10,14 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class listeningThread implements Runnable 
+public class Server implements Runnable 
 {
 	private ServerSocket serverSock;
 	private String pNum;
 	Socket clientSock;
 	Thread senderThrd;
 	
-	public listeningThread(ServerSocket sock, String peer) 
+	public Server(ServerSocket sock, String peer) 
 	{
 		this.serverSock = sock;
 		this.pNum = peer;

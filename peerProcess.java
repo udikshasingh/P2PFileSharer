@@ -2,10 +2,13 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Timer;
 import java.util.Vector;
 
 /**
@@ -21,18 +24,22 @@ import java.util.Vector;
 //import java.net.*;
 
 public class peerProcess {
-	public ServerSocket sock = null;
+	public ServerSocket socket = null;
 	public static String peerId;
 	public int pIndx;
 	public int portNum;
 	public static Map<String, Peer> peerMap = new HashMap<String, Peer>();
 	
 	public static  Map<String, Peer> preferedNeighboursMap = new HashMap<String, Peer>();
+	public static Map<String, Peer> unchokedPeer = new HashMap<>();
 	
 	public static Map<String, Socket> socketMap = new HashMap<String, Socket>();
-	public Thread thread;
+	
+	public static List<Thread> fromList = new ArrayList<Thread>();
+	public Thread listener;
 	public static Vector<Thread> tSender = new Vector<Thread>();
 	public static BitOperation bitOperation = null;
+	public static volatile Timer timer;
 	
 	
 	static FileOutputStream logFile;
@@ -48,7 +55,7 @@ public class peerProcess {
 			//Logger.startLog("log_peer_" + peerId +".log");
 			logFile = new FileOutputStream("log_peer_" + peerId +".log");
 			out = new OutputStreamWriter(logFile);
-			printLog(peerId + " is started");
+			printLog(peerId + " has started");
 			
 			//reading Common.cfg
 			String commLine = "";
@@ -57,22 +64,22 @@ public class peerProcess {
 				BufferedReader br = new BufferedReader(new FileReader("Common.cfg"));
 				while ((commLine = br.readLine()) != null) {
 					String[] comm = commLine.split("\\s+");
-					if (comm[0].toLowerCase().equals("numberofpreferredneighbors")){
+					if (comm[0].toLowerCase().equals("NumberOfPreferredNeighbors")){
 						Metadata.numberOfPreferredNeighbours = Integer.parseInt(comm[1]);
 					}  
-					else if (comm[0].toLowerCase().equals("unchokinginterval")) {
+					else if (comm[0].toLowerCase().equals("UnchokingInterval")) {
 						Metadata.unchokeInterval = Integer.parseInt(comm[1]);
 					} 
-					else if (comm[0].toLowerCase().equals("optimisticunchokinginterval")) {
+					else if (comm[0].toLowerCase().equals("OptimisticUnchokingInterval")) {
 						Metadata.optimisticUnchokeInterval = Integer.parseInt(comm[1]);
 					} 
-					else if (comm[0].toLowerCase().equals("filename")) {
+					else if (comm[0].toLowerCase().equals("FileName")) {
 						Metadata.fname = comm[1];
 					} 
-					else if (comm[0].toLowerCase().equals("filesize")) {
+					else if (comm[0].toLowerCase().equals("FileSize")) {
 						Metadata.fsize = Integer.parseInt(comm[1]);
 					} 
-					else if (comm[0].toLowerCase().equals("piecesize")) {
+					else if (comm[0].toLowerCase().equals("PieceSize")) {
 						Metadata.pieceLength = Integer.parseInt(comm[1]);
 					} 
 				}
@@ -95,8 +102,7 @@ public class peerProcess {
 				int i = 0;
 				while ((peerLine = br.readLine()) != null) {
 					String[] peer = peerLine.split("\\s+");
-				/*	peerMap.put(peer[0], new Peer(peer[0],
-							peer[1], peer[2], Integer.parseInt(peer[3]), i) );*/
+					peerMap.put(peer[0], new Peer(peer[0], peer[1], peer[2], Integer.parseInt(peer[3]), i) );
 					i++;
 				}
 				br.close();
@@ -109,15 +115,21 @@ public class peerProcess {
 			}
 			
 			//initializeNeighbours();
+			for (String pId : peerMap.keySet()) {
+				if (!pId.equals(peerId)) {
+					preferedNeighboursMap.put(pId, peerMap.get(pId));
+				}
+			}
 			
 			int flag = 0;
 			Iterator<String> itr = peerMap.keySet().iterator();
 			for(int i=0;i<peerMap.size();i++) {
-				if(peerId.equalsIgnoreCase(peerMap.get(itr.next()).peerId)) {
+				Peer peer = peerMap.get(itr.next());
+				if(peerId.equalsIgnoreCase(peer.peerId)) {
 					pProc.portNum = Integer.parseInt(peerMap.get(itr.next()).peerPort);
 					pProc.pIndx = peerMap.get(itr.next()).peerIndex;
-					Peer p = new Peer();
-					if(p.isFirst()==1) {
+					//Peer p = new Peer();
+					if(peer.isFirst()==1) {
 						flag = 1;
 						break;
 					}
@@ -125,21 +137,6 @@ public class peerProcess {
 				}
 			}
 			
-			/*while(i.hasNext()) {
-				Peer rmp = peerMap.get(i.next());
-				if(rmp.peerId==peerId)
-				{
-					// checks if the peer is the first peer or not
-					pProc.portNum = Integer.parseInt(rmp.peerPort);
-					pProc.pIndx = rmp.peerIndex;
-					if(rmp.isFirst() == 1)
-					{
-						firstPeerFlag = true;
-						break;
-						
-					}
-				}
-			}*/
 			
 		    // Initialize the BitOperation class 
 			
@@ -155,15 +152,15 @@ public class peerProcess {
 			if(flag == 1) {
 				try
 				{
-					pProc.sock = new ServerSocket(pProc.portNum);
+					pProc.socket = new ServerSocket(pProc.portNum);
 					
 					//instantiates and starts Listening Thread
-					pProc.thread = new Thread(new listeningThread(pProc.sock, peerId));
-					pProc.thread.start();
+					pProc.listener = new Thread(new Server(pProc.socket, peerId));
+					pProc.listener.start();
 				}
 				catch(SocketTimeoutException e)
 				{
-					printLog(peerId + " encountered time-out expetion: " + e.toString());
+					printLog(peerId + " timed out : " + e.toString());
 					out.close();
 					logFile.close();
 					e.printStackTrace();
@@ -171,7 +168,7 @@ public class peerProcess {
 				}
 				catch(IOException e)
 				{
-					printLog(peerId + " encountered exception while starting listening thread: " + pProc.portNum + e.toString());
+					printLog(peerId + " error in IO: " + pProc.portNum + e.toString());
 					out.close();
 					logFile.close();
 					e.printStackTrace();
@@ -197,17 +194,37 @@ public class peerProcess {
 					op.close();
 				} 
 				catch (Exception e) {
-					printLog(peerId + ": ERROR in creating the file : " + e.getMessage());
+					printLog(peerId + ": ERROR while creating peer file : " + e.getMessage());
 				}
-//	------------------------------------------------------------------			
 				
-//				for(int i=0;i<peerMap.size();i++) {
-//					if(pProc.pIndx>peerMap.get(itr.next()).peerIndex) {
-//						
-//					}
-//				}
-//				-----------------------------------------------------------------------------
+				for (String pId : peerMap.keySet()) {
+					Peer peer = peerMap.get((pId));
+					if (pProc.pIndx > peer.peerIndex) {
+						Thread thread = new Thread(new ConnectionManager(peer.peerIP, Integer.parseInt(peer.peerPort), 1, peerId));
+						fromList.add(thread);
+						thread.start();
+					}
+				}
+				
+				try {
+					pProc.socket = new ServerSocket(pProc.portNum);
+					pProc.listener = new Thread(new Server(pProc.socket, peerId));
+					pProc.listener.start();
+				} catch (SocketTimeoutException e) {
+					e.printStackTrace();
+					System.exit(0);
+					//add logger here
+				}
+				
+				catch (IOException e) {
+					e.printStackTrace();
+					System.exit(0);
+					//add logger here
+				}
 			}
+			timer = new Timer();
+			timer.schedule(new Neighbours(), Metadata.unchokeInterval * 1000 * 0, Metadata.unchokeInterval * 1000);
+			
 			
 		}
 		catch(Exception e)

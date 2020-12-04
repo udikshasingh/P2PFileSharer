@@ -10,3 +10,7 @@
 /Message.class
 /BitOperation.class
 /Piece.class
+/PeerHandler.class
+/ConnectionManager.class
+/Server.class
+/UnchokedPeers.class

@@ -2,7 +2,7 @@
 public class Peer implements Comparable<Peer>{
 	
 	String peerId;
-	String peerMachine;
+	public String peerIP;
 	String peerPort;
 	int isCompleted;
 	int handshakeCompleted;
@@ -13,6 +13,15 @@ public class Peer implements Comparable<Peer>{
 	int isChoked = 1;
 	int isPreferredNeighbor = 0;
 	int state = -1;
+	int isOptUnchokedNeighbor;
+	
+	public Peer(String peerId, String peerIP, String peerPort, int isFirst, int peerIndex) {
+		this.peerId = peerId;
+		this.peerIP = peerIP;
+		this.peerPort = peerPort;
+		this.isFirst = isFirst;
+		this.peerIndex = peerIndex;
+	}
 	
 	public int compareTo(Peer peer) {
 		
